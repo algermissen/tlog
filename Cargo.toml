@@ -1,0 +1,14 @@
+[package]
+name = "tlog"
+version = "0.1.0"
+authors = ["Algermissen Jan <jan.algermissen@metro.de>"]
+
+[dependencies]
+log = "0.3"
+tokio-core = "0.1.6"
+futures = "0.1.13"
+
+
+[[test]]
+name = "t1"
+harness = false
