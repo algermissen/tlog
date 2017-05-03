@@ -1,7 +1,7 @@
 # tlog
 Exploring logger implementation options that work well with [Tokio](https://tokio.rs/).
 
-# Status
+## Status
 Focussing right now on exploration, without going into the details of
 a proper logger (formatting, filtering, different backends, etc).
 
