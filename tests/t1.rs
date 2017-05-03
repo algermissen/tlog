@@ -9,7 +9,7 @@ use std::time::Duration;
 use std::thread;
 
 fn main() {
-    tlog::init().unwrap();
+    tlog::initLockFree().unwrap();
     info!("XYZ Message");
     thread::sleep(Duration::new(5, 0));
 }

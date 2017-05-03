@@ -1,25 +1,18 @@
-//#[macro_use]
 extern crate log;
-extern crate futures;
-extern crate tokio_core;
+extern crate crossbeam;
 
-use std::thread;
-
-use futures::{Stream, Sink, Future};
-//use futures::sync::mpsc;
-//use futures::sync::mpsc::SyncSender;
-//use futures::sync::mpsc::Receiver;
 use std::sync::mpsc;
 use std::sync::mpsc::sync_channel;
 use std::sync::mpsc::SyncSender;
 use std::sync::mpsc::Receiver;
 use std::sync::Mutex;
+use std::thread;
+use std::sync::Arc;
 
-use tokio_core::reactor::Core;
+use crossbeam::sync::MsQueue;
 
 
 use log::{Log, LogLevel, LogLevelFilter, LogRecord, SetLoggerError, LogMetadata};
-
 
 pub struct Logger {
     tx: Mutex<SyncSender<String>>
@@ -35,6 +28,22 @@ impl Log for Logger {
             let s = format!("{} - {}", record.level(), record.args());
             let mut data = self.tx.lock().unwrap();
             data.try_send(s).expect("Cannot log")
+        }
+    }
+}
+
+pub struct LockFreeLogger {
+    tx: Arc<MsQueue<String>>
+}
+impl Log for LockFreeLogger {
+    fn enabled(&self, metadata: &LogMetadata) -> bool {
+        metadata.level() <= LogLevel::Info
+    }
+
+    fn log(&self, record: &LogRecord) {
+        if self.enabled(record.metadata()) {
+            let s = format!("{} - {}", record.level(), record.args());
+            self.tx.push(s);
         }
     }
 }
@@ -64,7 +73,7 @@ pub fn init() -> Result<(), SetLoggerError> {
     thread::spawn(move || {
         loop {
             let s = rx.recv().unwrap();
-            println!("LOG {}", s);
+            println!("V1 LOG: {}", s);
         }
     });
 
@@ -76,6 +85,27 @@ pub fn init() -> Result<(), SetLoggerError> {
         Box::new(logger)
     })
 }
+pub fn initLockFree() -> Result<(), SetLoggerError> {
+    let q: Arc<MsQueue<String>> = Arc::new(MsQueue::new());
+
+    let q2 = q.clone();
+
+    thread::spawn(move || {
+        loop {
+            let s = q2.pop();
+            println!("V1 LOG: {}", s);
+        }
+    });
+
+    log::set_logger(|max_log_level| {
+        let logger = LockFreeLogger {
+            tx: q
+        };
+        max_log_level.set(LogLevelFilter::Info);
+        Box::new(logger)
+    })
+}
+
 
 //#[cfg(test)]
 //mod tests {
